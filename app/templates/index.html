@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft文件分发服务</title>
+    <!-- 引入Vue 3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.js"></script>
+    <!-- 引入Element Plus -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/element-plus/2.3.8/index.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/element-plus/2.3.8/index.full.js"></script>
+    <!-- 引入Element Plus图标 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/element-plus-icons-vue/2.1.0/index.iife.min.js"></script>
+    <!-- 引入Echarts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    
+    <link rel="stylesheet" href="[| url_for('static', filename='css/index.css') |]">
+</head>
+
+<body>
+    <div id="app">
+        <div class="container">
+            <!-- 仪表盘部分 -->
+            <div class="dashboard" :class="{ hidden: currentSection !== 'dashboard' }">
+                <!-- 统计卡片 -->
+                <div class="stats-cards">
+                    <el-card>
+                        <template #header>
+                            <div class="card-header">
+                                <span>文件分发总数</span>
+                                <el-icon>
+                                    <document />
+                                </el-icon>
+                            </div>
+                        </template>
+                        <div style="text-align: center">
+                            <h2>{{ stats.totalDistributions }}</h2>
+                            <small>较昨日 +{{ stats.dailyIncrease }}</small>
+                        </div>
+                    </el-card>
+
+                    <el-card>
+                        <template #header>
+                            <div class="card-header">
+                                <span>监控文件数</span>
+                                <el-icon>
+                                    <monitor />
+                                </el-icon>
+                            </div>
+                        </template>
+                        <div style="text-align: center">
+                            <h2>{{ stats.monitoredFiles }}</h2>
+                            <small>活跃路径: {{ stats.activePaths }}</small>
+                        </div>
+                    </el-card>
+
+                    <el-card>
+                        <template #header>
+                            <div class="card-header">
+                                <span>24小时分发趋势</span>
+                                <el-icon><trend-charts /></el-icon>
+                            </div>
+                        </template>
+                        <div id="trend-chart" class="chart-container"></div>
+                    </el-card>
+
+                    <el-card>
+                        <template #header>
+                            <div class="card-header">
+                                <span>服务器状态</span>
+                                <el-icon>
+                                    <connection />
+                                </el-icon>
+                            </div>
+                        </template>
+                        <div style="text-align: center">
+                            <h2>{{ stats.serverStatus }}</h2>
+                            <small>运行时间: {{ stats.uptime }}</small>
+                        </div>
+                    </el-card>
+                </div>
+
+                <!-- 功能卡片 -->
+                <div class="feature-cards">
+                    <el-card shadow="hover" @click="switchSection('monitor')">
+                        <div style="text-align: center">
+                            <el-icon size="30">
+                                <document />
+                            </el-icon>
+                            <h3>文件监控</h3>
+                        </div>
+                    </el-card>
+
+                    <el-card shadow="hover">
+                        <div style="text-align: center">
+                            <el-icon size="30">
+                                <setting />
+                            </el-icon>
+                            <h3>访问控制</h3>
+                        </div>
+                    </el-card>
+
+                    <el-card shadow="hover">
+                        <div style="text-align: center">
+                            <el-icon size="30">
+                                <connection />
+                            </el-icon>
+                            <h3>服务配置</h3>
+                        </div>
+                    </el-card>
+
+                    <el-card shadow="hover">
+                        <div style="text-align: center">
+                            <el-icon size="30">
+                                <search />
+                            </el-icon>
+                            <h3>日志查询</h3>
+                        </div>
+                    </el-card>
+                </div>
+            </div>
+
+            <!-- 监控界面 -->
+            <div class="monitor-section" :class="{ active: currentSection === 'monitor' }">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h2>文件监控</h2>
+                    <!-- 浮动返回按钮 -->
+                    <button class="float-back-btn" @click="switchSection('dashboard')"
+                        v-if="currentSection === 'monitor'">
+                        <el-icon>
+                            <back />
+                        </el-icon>
+                    </button>
+                </div>
+
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-card>
+                            <template #header>
+                                <div class="card-header">
+                                    <span>服务器文件列表</span>
+                                    <el-button type="primary" size="small" @click="addToMonitor">
+                                        添加到监控
+                                    </el-button>
+                                </div>
+                            </template>
+                            <el-table :data="serverFiles" @selection-change="handleServerSelection">
+                                <el-table-column type="selection" width="55">
+                                </el-table-column>
+                                <el-table-column prop="name" label="文件名">
+                                </el-table-column>
+                                <el-table-column prop="size" label="大小" width="120">
+                                </el-table-column>
+                            </el-table>
+                        </el-card>
+                    </el-col>
+
+                    <el-col :span="12">
+                        <el-card>
+                            <template #header>
+                                <div class="card-header">
+                                    <span>监控文件列表</span>
+                                    <el-button type="danger" size="small" @click="removeFromMonitor">
+                                        删除
+                                    </el-button>
+                                </div>
+                            </template>
+                            <el-table :data="monitoredFiles" @selection-change="handleMonitorSelection">
+                                <el-table-column type="selection" width="55">
+                                </el-table-column>
+                                <el-table-column prop="name" label="文件名">
+                                </el-table-column>
+                                <el-table-column prop="lastUpdate" label="最后更新" width="180">
+                                </el-table-column>
+                            </el-table>
+                        </el-card>
+                    </el-col>
+                </el-row>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="[| url_for('static', filename='js/index.js') |]"></script>
+</body>
+
+</html>
