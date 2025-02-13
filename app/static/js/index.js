@@ -65,7 +65,7 @@ const app = createApp({
         // 初始化数据
         onMounted(async () => {
 
-  document.body.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden';
             // 获取服务器文件列表
             let response = await api.admin.getDirectoryContents();
             flushServerFileList(response.data, response.data.data)
@@ -74,9 +74,8 @@ const app = createApp({
 
             setTimeout(() => {
                 isLoading.value = false
-
-    document.body.style.overflow = '';
-            }, 2500)
+                document.body.style.overflow = '';
+            }, 700)
         })
 
         // 初始化趋势图表
@@ -161,16 +160,16 @@ const app = createApp({
             data.result.sort((a, b) => {
                 // 先比较 is_directory，true 的排在前面
                 if (a.is_directory && !b.is_directory) {
-                  return -1; // a 排在前面
+                    return -1; // a 排在前面
                 } else if (!a.is_directory && b.is_directory) {
-                  return 1; // b 排在前面
+                    return 1; // b 排在前面
                 } else {
-                  // 如果 is_directory 相同，按 updated_date 排序
-                  const dateA = new Date(a.updated_date);
-                  const dateB = new Date(b.updated_date);
-                  return dateA - dateB; // 升序排序，若需降序排序，使用 dateB - dateA
+                    // 如果 is_directory 相同，按 updated_date 排序
+                    const dateA = new Date(a.updated_date);
+                    const dateB = new Date(b.updated_date);
+                    return dateA - dateB; // 升序排序，若需降序排序，使用 dateB - dateA
                 }
-              });
+            });
 
             for (let item of data.result) {
                 files.push({
@@ -274,13 +273,13 @@ const app = createApp({
             response = await api.admin.queryMonitor(monitoredFilesCurrentPage, monitoredFilesCurrentSize);
             flushMonitoredFilesList(response.data, response.data.data)
         };
-        
+
         const generateVersion = async () => {
             let response = await api.admin.genVersion()
             let msg = ""
             if (!response.data.status) {
                 msg = "更新版本失败！" + response.data.code + ":" + response.data.data
-            }else{
+            } else {
                 msg = "更新版本成功！"
             }
             console.log(msg)

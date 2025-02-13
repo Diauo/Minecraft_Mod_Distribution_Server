@@ -8,7 +8,7 @@
     position: relative;
     width: 100%;
     height: 100vh;
-  }
+}
 
 .mask {
     position: absolute;
@@ -20,44 +20,48 @@
     justify-content: center;
     align-items: center;
     z-index: 9999;
-  }
-  
-  .door {
+}
+
+.door {
     position: absolute;
     width: 100%;
     height: 50%;
     background-color: #e3fbff;
-  }
-  
-  .top {
-    top: 0;
-    animation: openTopDoor 2s 0.5s forwards;
-  }
-  
-  .bottom {
-    bottom: 0;
-    animation: openBottomDoor 2s 0.5s forwards;
-  }
+}
 
-  @keyframes openTopDoor {
+.top {
+    top: 0;
+    animation: openTopDoor 0.5s 0.2s forwards;
+}
+
+.bottom {
+    bottom: 0;
+    animation: openBottomDoor 0.5s 0.2s forwards;
+}
+
+@keyframes openTopDoor {
     0% {
-      transform: translateY(0);
+        transform: translateY(0);
     }
+
     100% {
-      transform: translateY(-110%); /* 向上平移 */
+        transform: translateY(-110%);
+        /* 向上平移 */
     }
-  }
-  
-  /* Bottom door animation: move downwards */
-  @keyframes openBottomDoor {
+}
+
+/* Bottom door animation: move downwards */
+@keyframes openBottomDoor {
     0% {
-      transform: translateY(0);
+        transform: translateY(0);
     }
+
     100% {
-      transform: translateY(110%); /* 向下平移 */
+        transform: translateY(110%);
+        /* 向下平移 */
     }
-  }
-  
+}
+
 
 .feature-cards-body {
     cursor: pointer;
