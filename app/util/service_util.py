@@ -51,7 +51,7 @@ def get_default_path():
 
 def generate_new_version_number():
     """生成新的版本号，例如 'v20250210_1530' """
-    now = datetime.datetime.now()
+    now = datetime.now()
     return "v" + now.strftime("%Y%m%d_%H%M%S")
 
 

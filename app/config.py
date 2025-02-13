@@ -8,6 +8,7 @@ class Config:
     GLOBAL_RESULT_FORMAT_EXCLUSION_INTERFACE = ['/api/file/download']
     CACHE_TYPE = 'simple'
     CACHE_DEFAULT_TIMEOUT = 600
+    DEFAULT_PATH = "C:\\Users\\admin\\Desktop\\工程调度中心\\mctest"
 
 
 class Test_config(Config):

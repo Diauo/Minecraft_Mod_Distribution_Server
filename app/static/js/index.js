@@ -46,6 +46,10 @@ const app = createApp({
         const serverCurrentPath = ref(null)
         // 当前目录文件数量
         const serverFileCount = ref(0)
+        // 监控的文件
+        const monitoredFiles = ref([]);
+        let monitoredFilesCurrentPage = 1;
+        let monitoredFilesCurrentSize = 100;
 
         // 模拟数据
         const stats = ref({
@@ -61,10 +65,19 @@ const app = createApp({
         onMounted(async () => {
             // 获取服务器文件列表
             let response = await api.admin.getDirectoryContents();
-            flushServerFileList(response.data.data)
+            flushServerFileList(response.data, response.data.data)
+            response = await api.admin.queryMonitor(monitoredFilesCurrentPage, monitoredFilesCurrentSize);
+            flushMonitoredFilesList(response.data, response.data.data)
         })
 
-        const flushServerFileList = (data) => {
+        // 刷新文件列表
+        const flushServerFileList = (result, data) => {
+            if (!result.status) {
+                let msg = "刷新服务器文件列表失败：" + result.code + ":" + data
+                console.log(msg)
+                alert(msg)
+                return
+            }
             serverFileCount.value = data.count
             serverCurrentPath.value = data.current_path
             let files = [{ name: "[返回上一级]", isDir: true, isBack: true }]
@@ -87,10 +100,42 @@ const app = createApp({
             serverFiles.value = files;
         }
 
-        const monitoredFiles = ref([
-            { name: 'server.properties', lastUpdate: '2025-02-12 14:28:31' },
-            { name: 'mods/fabric-api.jar', lastUpdate: '2025-02-12 14:28:31' }
-        ]);
+        // 刷新文件列表
+        const flushMonitoredFilesList = (result, data) => {
+            if (!result.status) {
+                let msg = "刷新监控文件列表失败：" + result.code + ":" + data
+                console.log(msg)
+                alert(msg)
+                return
+            }
+            let files = []
+
+            data.result.sort((a, b) => {
+                // 先比较 is_directory，true 的排在前面
+                if (a.is_directory && !b.is_directory) {
+                  return -1; // a 排在前面
+                } else if (!a.is_directory && b.is_directory) {
+                  return 1; // b 排在前面
+                } else {
+                  // 如果 is_directory 相同，按 updated_date 排序
+                  const dateA = new Date(a.updated_date);
+                  const dateB = new Date(b.updated_date);
+                  return dateA - dateB; // 升序排序，若需降序排序，使用 dateB - dateA
+                }
+              });
+
+            for (let item of data.result) {
+                files.push({
+                    name: item.name,
+                    clientPath: item.client_path,
+                    serverPath: item.server_path,
+                    isDir: item.is_directory,
+                    lastUpdate: item.updated_date,
+                    allow: item.allow
+                })
+            }
+            monitoredFiles.value = files;
+        }
 
         // 切换页面
         const switchSection = (section) => {
@@ -124,14 +169,15 @@ const app = createApp({
                     if (row.isBack) {
                         // 返回上一级目录
                         let lastIndex = serverCurrentPath.value.lastIndexOf("\\");
-                        if (lastIndex !== -1) serverCurrentPath.value = serverCurrentPath.value.slice(0, lastIndex)
-                        response = await api.admin.getDirectoryContents(serverCurrentPath.value, undefined);
+                        let path = serverCurrentPath.value
+                        if (lastIndex !== -1) path = path.slice(0, lastIndex)
+                        response = await api.admin.getDirectoryContents(path, undefined);
                     } else {
                         // 异步获取新目录内容
                         response = await api.admin.getDirectoryContents(serverCurrentPath.value + "\\" + row.name, undefined);
                     }
                     // 刷新文件列表
-                    flushServerFileList(response.data.data)
+                    flushServerFileList(response.data, response.data.data)
                 } catch (error) {
                     console.error("获取目录内容失败～", error);
                 }
@@ -152,16 +198,46 @@ const app = createApp({
         };
 
         // 添加到监控
-        const addToMonitor = () => {
-            // 这里添加实际的添加逻辑
-            console.log('添加到监控:', selectedServerFiles.value);
+        const addToMonitor = async (allow) => {
+            let files = []
+            for (let item of selectedServerFiles.value) {
+                files.push({
+                    name: item.name,
+                    server_path: item.path,
+                    client_path: "记得加上设置客户端路径的逻辑",
+                    is_directory: item.isDir,
+                    allow: allow,
+                })
+            }
+            let response = await api.admin.modifyMonitorList(true, files)
+            response = await api.admin.queryMonitor(monitoredFilesCurrentPage, monitoredFilesCurrentSize);
+            flushMonitoredFilesList(response.data, response.data.data)
         };
 
         // 从监控中移除
-        const removeFromMonitor = () => {
-            // 这里添加实际的移除逻辑
-            console.log('从监控中移除:', selectedMonitorFiles.value);
+        const removeFromMonitor = async () => {
+            let files = []
+            for (let item of selectedMonitorFiles.value) {
+                files.push({
+                    server_path: item.serverPath
+                })
+            }
+            let response = await api.admin.modifyMonitorList(false, files)
+            response = await api.admin.queryMonitor(monitoredFilesCurrentPage, monitoredFilesCurrentSize);
+            flushMonitoredFilesList(response.data, response.data.data)
         };
+        
+        const generateVersion = async () => {
+            let response = await api.admin.genVersion()
+            let msg = ""
+            if (!response.data.status) {
+                msg = "更新版本失败！" + response.data.code + ":" + response.data.data
+            }else{
+                msg = "更新版本成功！"
+            }
+            console.log(msg)
+            alert(msg)
+        }
 
         // 初始化趋势图表
         onMounted(() => {
@@ -237,7 +313,8 @@ const app = createApp({
             handleMonitoredFileTableRowClick,
             addToMonitor,
             removeFromMonitor,
-            getFileIcon
+            getFileIcon,
+            generateVersion,
         };
     }
 });

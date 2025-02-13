@@ -4,6 +4,13 @@
     box-sizing: border-box;
 }
 
+.feature-cards-body{
+    cursor: pointer;
+}
+.card-header-title{
+    padding: 0px 10px 0px 10px;
+}
+
 .container {
     padding: 20px;
     max-width: 1200px;

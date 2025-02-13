@@ -84,7 +84,7 @@
 
                 <!-- 功能卡片 -->
                 <div class="feature-cards">
-                    <el-card shadow="hover" @click="switchSection('monitor')">
+                    <el-card class="feature-cards-body" shadow="hover" @click="switchSection('monitor')">
                         <div style="text-align: center">
                             <el-icon size="30">
                                 <document />
@@ -93,7 +93,7 @@
                         </div>
                     </el-card>
 
-                    <el-card shadow="hover">
+                    <el-card class="feature-cards-body" shadow="hover">
                         <div style="text-align: center">
                             <el-icon size="30">
                                 <setting />
@@ -102,7 +102,7 @@
                         </div>
                     </el-card>
 
-                    <el-card shadow="hover">
+                    <el-card class="feature-cards-body" shadow="hover">
                         <div style="text-align: center">
                             <el-icon size="30">
                                 <connection />
@@ -111,7 +111,7 @@
                         </div>
                     </el-card>
 
-                    <el-card shadow="hover">
+                    <el-card class="feature-cards-body" shadow="hover">
                         <div style="text-align: center">
                             <el-icon size="30">
                                 <search />
@@ -139,17 +139,19 @@
                         <el-card>
                             <template #header>
                                 <div class="card-header">
-                                    <span>服务器文件列表</span>
-                                    <el-button type="primary" size="small" @click="addToMonitor">
+                                    <span class="card-header-title">服务器文件列表</span>
+                                    <el-button type="primary" size="small" @click="addToMonitor(true)">
                                         添加到监控
+                                    </el-button>
+                                    <el-button type="warning" size="small" @click="addToMonitor(false)">
+                                        添加到排除
                                     </el-button>
                                 </div>
                             </template>
                             <el-table ref="serverFileTable" :data="serverFiles"
                                 @selection-change="handleServerSelection" @row-click="handleServerFileTableRowClick"
                                 :row-class-name="getServerFileTableRowClassName" class="file-table" height="400px">
-                                <el-table-column type="selection" width="55" 
-                                :selectable="selectable"></el-table-column>
+                                <el-table-column type="selection" width="55" :selectable="selectable"></el-table-column>
                                 <el-table-column label="文件名">
                                     <template #default="scope">
                                         <el-icon v-if="scope.row.isDir && !scope.row.isBack" class="folder-icon">
@@ -174,9 +176,12 @@
                         <el-card>
                             <template #header>
                                 <div class="card-header">
-                                    <span>监控文件列表</span>
+                                    <span class="card-header-title">监控文件列表</span>
                                     <el-button type="danger" size="small" @click="removeFromMonitor">
                                         删除
+                                    </el-button>
+                                    <el-button type="success" size="small" @click="generateVersion">
+                                        更新版本
                                     </el-button>
                                 </div>
                             </template>
@@ -195,6 +200,10 @@
                                         {{ scope.row.name }}
                                     </template>
                                 </el-table-column>
+                                <el-table-column prop="allow" label="分发规则" width="180">
+                                    <template #default="scope">
+                                        <span>{{ scope.row.allow ? '允许分发' : '阻止分发' }}</span>
+                                    </template></el-table-column>
                                 <el-table-column prop="lastUpdate" label="最后更新" width="180"></el-table-column>
                             </el-table>
                         </el-card>

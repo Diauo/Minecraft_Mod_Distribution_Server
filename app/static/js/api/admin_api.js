@@ -1,5 +1,5 @@
 const admin_api = {
-  modifyMonitor_list(add, monitor_list) {
+  modifyMonitorList(add, monitor_list) {
     return axios.post('/api/him/modify_monitor', {
       'add': add,
       'monitor_list': monitor_list
@@ -22,7 +22,7 @@ const admin_api = {
     });
   },
   genVersion() {
-    return axios.get('/api/him/query_monitor')
+    return axios.get('/api/him/gen_version')
   },
   reloadConfig() {
     return axios.get('/api/him/reload_config')

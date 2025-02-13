@@ -1,15 +1,23 @@
 from app import db
 from datetime import datetime
+from sqlalchemy.types import TypeDecorator, DateTime
 
+class FormattedDateTime(TypeDecorator):
+    impl = DateTime
 
+    def process_bind_param(self, value, dialect):
+        return value  # 插入时保持 datetime 类型
+
+    def process_result_value(self, value, dialect):
+        return value.strftime('%Y-%m-%d %H:%M:%S') if value else None  # 查询时格式化
+    
 class Base_model(db.Model):
     __tablename__ = "base"
     __abstract__ = True  # 标记为抽象类，不会映射到具体的表
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    created_date = db.Column(db.DateTime, default=datetime.now)
-    updated_date = db.Column(
-        db.DateTime, default=datetime.now, onupdate=datetime.now)
+    created_date = db.Column(FormattedDateTime, default=datetime.now)
+    updated_date = db.Column(FormattedDateTime, default=datetime.now, onupdate=datetime.now)
 
     def save(self):
         db.session.add(self)
@@ -70,7 +78,3 @@ class Access_list(Base_model):
     UUID = db.Column(db.String(64), unique=False, nullable=True)
     ip_addr = db.Column(db.String(64), unique=False, nullable=True)
     allow = db.Column(db.Boolean, unique=False, nullable=False)
-
-
-# 最后引入模型事件
-from . import models_events
