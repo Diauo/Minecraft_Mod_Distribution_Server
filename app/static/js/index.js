@@ -75,7 +75,7 @@ const app = createApp({
             setTimeout(() => {
                 isLoading.value = false
                 document.body.style.overflow = '';
-            }, 700)
+            }, 1800)
         })
 
         // 初始化趋势图表
