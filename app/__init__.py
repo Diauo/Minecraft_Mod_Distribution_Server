@@ -29,8 +29,8 @@ def create_app(config_class='app.config.Config'):
     app.register_blueprint(index_bp)
     from app.controllers.file_controller import file_bp
     app.register_blueprint(file_bp, url_prefix='/api/file')
-    from app.controllers.manage_controller import manage_bp
-    app.register_blueprint(manage_bp, url_prefix='/api/him')
+    from app.controllers.admin_controller import admin_bp
+    app.register_blueprint(admin_bp, url_prefix='/api/him')
 
     # 注册中间件
     app_before_request(app)
@@ -42,7 +42,7 @@ def create_app(config_class='app.config.Config'):
         db.create_all()
 
         # 读取数据库中的服务配置
-        from app.services.manage_service import set_server_config_from_db
+        from app.services.admin_service import set_server_config_from_db
         set_server_config_from_db()
 
     logger.info("服务器启动完成")

@@ -14,7 +14,7 @@ class TestService(unittest.TestCase):
 
     def test_get_feature_by_category_tags_id(self):
         # 调用服务方法并验证结果
-        result = file_service.get_category_by_customer_id()
+        result = file_service.generate_version_snapshot_service()
         print(result)
 
 if __name__ == "__main__":

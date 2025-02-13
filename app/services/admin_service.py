@@ -117,10 +117,10 @@ def get_directory_contents(path=None, filter_pattern=None):
     :param filter_pattern: 可选的正则过滤模式，默认不进行过滤
     :return: 包含文件和目录列表以及当前路径的JSON响应
     """
-    # 如果没有传递路径，使用默认路径
-    if not path:
+    # 如果没有传递路径，使用默认路径，同时，到达windows和linux的根目录也执行阻断
+    if not path or (path.endswith(":") or path == ("/")):
         path = service_util.get_default_path()
-
+        
     # 检查路径是否存在
     if not os.path.exists(path):
         return 404, "路径不存在", None

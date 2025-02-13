@@ -1,16 +1,21 @@
 import api from './api/api.js';
+import { formatFileSize } from './util.js';
 
 const { createApp, ref, onMounted, onUnmounted } = Vue;
 
 // 获取所有图标组件
 const {
+    Folder,
     Back,
     Document,
     Monitor,
     TrendCharts,
     Connection,
     Setting,
-    Search
+    Search,
+    Picture,
+    VideoCamera,
+    Files
 } = ElementPlusIconsVue;
 
 // 添加防抖函数
@@ -31,6 +36,17 @@ const app = createApp({
         const selectedMonitorFiles = ref([]);
         let chart = null; // 存储图表实例
 
+        // ref对象
+        const serverFileTable = ref(null);
+        const monitoredFileTable = ref(null);
+
+        // 服务器文件
+        const serverFiles = ref([]);
+        // 服务器当前路径
+        const serverCurrentPath = ref(null)
+        // 当前目录文件数量
+        const serverFileCount = ref(0)
+
         // 模拟数据
         const stats = ref({
             totalDistributions: 3651,
@@ -41,11 +57,35 @@ const app = createApp({
             uptime: '24天'
         });
 
-        const serverFiles = ref([
-            { name: 'server.properties', size: '2KB' },
-            { name: 'mods/fabric-api.jar', size: '1.2MB' },
-            { name: 'config/fabric.conf', size: '4KB' }
-        ]);
+        // 初始化数据
+        onMounted(async () => {
+            // 获取服务器文件列表
+            let response = await api.admin.getDirectoryContents();
+            flushServerFileList(response.data.data)
+        })
+
+        const flushServerFileList = (data) => {
+            serverFileCount.value = data.count
+            serverCurrentPath.value = data.current_path
+            let files = [{ name: "[返回上一级]", isDir: true, isBack: true }]
+            for (let item of data.directories) {
+                files.push({
+                    name: item.name,
+                    path: item.path,
+                    isDir: true
+                })
+            }
+            for (let item of data.files) {
+                files.push({
+                    name: item.name,
+                    path: item.path,
+                    isDir: false,
+                    size: formatFileSize(item.size),
+                    lastModified: item.last_modified
+                })
+            }
+            serverFiles.value = files;
+        }
 
         const monitoredFiles = ref([
             { name: 'server.properties', lastUpdate: '2025-02-12 14:28:31' },
@@ -64,6 +104,51 @@ const app = createApp({
 
         const handleMonitorSelection = (selection) => {
             selectedMonitorFiles.value = selection;
+        };
+
+        const selectable = (row) => {
+            if (row.isBack) {
+                return false;
+            }
+            return true;
+        };
+
+        const handleServerFileTableRowClick = async (row, column, event) => {
+            // 如果点击的是文件夹，进入下一层
+            if (row.isDir) {
+                // 取消所有选择
+                selectedServerFiles.value = [];
+                serverFileTable.value.clearSelection();
+                try {
+                    let response = null
+                    if (row.isBack) {
+                        // 返回上一级目录
+                        let lastIndex = serverCurrentPath.value.lastIndexOf("\\");
+                        if (lastIndex !== -1) serverCurrentPath.value = serverCurrentPath.value.slice(0, lastIndex)
+                        response = await api.admin.getDirectoryContents(serverCurrentPath.value, undefined);
+                    } else {
+                        // 异步获取新目录内容
+                        response = await api.admin.getDirectoryContents(serverCurrentPath.value + "\\" + row.name, undefined);
+                    }
+                    // 刷新文件列表
+                    flushServerFileList(response.data.data)
+                } catch (error) {
+                    console.error("获取目录内容失败～", error);
+                }
+            } else {
+                serverFileTable.value.toggleRowSelection(row);
+            }
+        };
+
+        const handleMonitoredFileTableRowClick = (row, column, event) => {
+            monitoredFileTable.value.toggleRowSelection(row);
+        };
+
+        const getServerFileTableRowClassName = ({ row }) => {
+            return selectedServerFiles.value.includes(row) ? 'selected-row' : '';
+        };
+        const getMonitoredFileTableRowClassName = ({ row }) => {
+            return selectedMonitorFiles.value.includes(row) ? 'selected-row' : '';
         };
 
         // 添加到监控
@@ -117,6 +202,24 @@ const app = createApp({
             });
         });
 
+        const getFileIcon = (fileName) => {
+            const ext = fileName.split('.').pop().toLowerCase();
+            const iconMap = {
+                png: Picture,
+                jpg: Picture,
+                jpeg: Picture,
+                gif: Picture,
+                mp4: VideoCamera,
+                avi: VideoCamera,
+                mkv: VideoCamera,
+                doc: Document,
+                docx: Document,
+                pdf: Document
+            };
+            return iconMap[ext] || Files;
+        }
+
+
         return {
             currentSection,
             stats,
@@ -125,8 +228,16 @@ const app = createApp({
             switchSection,
             handleServerSelection,
             handleMonitorSelection,
+            selectable,
+            serverFileTable,
+            monitoredFileTable,
+            getServerFileTableRowClassName,
+            getMonitoredFileTableRowClassName,
+            handleServerFileTableRowClick,
+            handleMonitoredFileTableRowClick,
             addToMonitor,
-            removeFromMonitor
+            removeFromMonitor,
+            getFileIcon
         };
     }
 });
@@ -135,6 +246,7 @@ const app = createApp({
 app.use(ElementPlus);
 
 // 注册所有用到的图标组件
+app.component('Folder', Folder);
 app.component('Back', Back);
 app.component('Document', Document);
 app.component('Monitor', Monitor);
@@ -142,5 +254,8 @@ app.component('TrendCharts', TrendCharts);
 app.component('Connection', Connection);
 app.component('Setting', Setting);
 app.component('Search', Search);
+app.component('Picture', Picture);
+app.component('VideoCamera', VideoCamera);
+app.component('Files', Files);
 
 app.mount('#app');

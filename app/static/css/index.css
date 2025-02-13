@@ -1,4 +1,3 @@
-
 * {
     margin: 0;
     padding: 0;
@@ -56,11 +55,10 @@
     margin-top: 10px;
 }
 
-/* 新添加的返回按钮样式 */
 .float-back-btn {
     position: fixed;
     left: 30px;
-    top: 50%;
+    top: 85%;
     transform: translateY(-50%);
     width: 50px;
     height: 50px;
@@ -104,4 +102,53 @@
 
 .float-back-btn {
     animation: breathe 2s infinite ease-in-out;
+}
+
+.selected-row {
+    background-color: #fef2f2 !important;
+    /* 选中行背景 */
+    color: #409eff;
+    /* 选中行文字颜色 */
+
+    /* 增加边框和阴影 */
+    border: 2px solid #409eff;
+    /* 添加边框 */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    /* 增加阴影，轻微的浮动效果 */
+
+    /* 向上浮动 */
+    transform: translateX(-8px);
+    /* 向上浮动 5px */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    /* 加入过渡效果 */
+
+    /* 鼠标放上去变成点击光标 */
+    cursor: pointer;
+}
+
+/* 让表格支持滚动 */
+.el-table {
+    overflow: auto;
+}
+
+/* 文件夹样式 */
+.folder-icon {
+    color: #FFD700;
+    margin-right: 5px;
+}
+
+/* 文件图标突出显示 */
+.file-icon {
+    color: #409EFF;
+    margin-right: 5px;
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+/* 鼠标悬停文件项上浮效果 */
+.file-table .el-table__row:hover {
+    cursor: pointer;
+    transform: translateY(-3px);
+    transition: transform 0.3s ease;
+    background-color: #f5f5f5;
 }
