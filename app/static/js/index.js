@@ -39,6 +39,7 @@ const app = createApp({
         // ref对象
         const serverFileTable = ref(null);
         const monitoredFileTable = ref(null);
+        const isLoading = ref(true)
 
         // 服务器文件
         const serverFiles = ref([]);
@@ -63,12 +64,59 @@ const app = createApp({
 
         // 初始化数据
         onMounted(async () => {
+
+  document.body.style.overflow = 'hidden';
             // 获取服务器文件列表
             let response = await api.admin.getDirectoryContents();
             flushServerFileList(response.data, response.data.data)
             response = await api.admin.queryMonitor(monitoredFilesCurrentPage, monitoredFilesCurrentSize);
             flushMonitoredFilesList(response.data, response.data.data)
+
+            setTimeout(() => {
+                isLoading.value = false
+
+    document.body.style.overflow = '';
+            }, 2500)
         })
+
+        // 初始化趋势图表
+        onMounted(() => {
+            chart = echarts.init(document.getElementById('trend-chart'));
+            const option = {
+                xAxis: {
+                    type: 'category',
+                    data: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00']
+                },
+                yAxis: {
+                    type: 'value'
+                },
+                series: [{
+                    data: [150, 230, 224, 218, 135, 147, 260],
+                    type: 'line',
+                    smooth: true,
+                    areaStyle: {}
+                }]
+            };
+            chart.setOption(option);
+
+            // 使用防抖处理 resize
+            const debouncedResize = debounce(() => {
+                if (chart) {
+                    chart.resize();
+                }
+            }, 100); // 100ms 的防抖延迟
+
+            window.addEventListener('resize', debouncedResize);
+
+            // 在组件卸载时清理
+            onUnmounted(() => {
+                window.removeEventListener('resize', debouncedResize);
+                if (chart) {
+                    chart.dispose();
+                    chart = null;
+                }
+            });
+        });
 
         // 刷新文件列表
         const flushServerFileList = (result, data) => {
@@ -239,45 +287,6 @@ const app = createApp({
             alert(msg)
         }
 
-        // 初始化趋势图表
-        onMounted(() => {
-            chart = echarts.init(document.getElementById('trend-chart'));
-            const option = {
-                xAxis: {
-                    type: 'category',
-                    data: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00']
-                },
-                yAxis: {
-                    type: 'value'
-                },
-                series: [{
-                    data: [150, 230, 224, 218, 135, 147, 260],
-                    type: 'line',
-                    smooth: true,
-                    areaStyle: {}
-                }]
-            };
-            chart.setOption(option);
-
-            // 使用防抖处理 resize
-            const debouncedResize = debounce(() => {
-                if (chart) {
-                    chart.resize();
-                }
-            }, 100); // 100ms 的防抖延迟
-
-            window.addEventListener('resize', debouncedResize);
-
-            // 在组件卸载时清理
-            onUnmounted(() => {
-                window.removeEventListener('resize', debouncedResize);
-                if (chart) {
-                    chart.dispose();
-                    chart = null;
-                }
-            });
-        });
-
         const getFileIcon = (fileName) => {
             const ext = fileName.split('.').pop().toLowerCase();
             const iconMap = {
@@ -297,6 +306,7 @@ const app = createApp({
 
 
         return {
+            isLoading,
             currentSection,
             stats,
             serverFiles,

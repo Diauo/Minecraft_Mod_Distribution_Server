@@ -21,6 +21,13 @@
 
 <body>
     <div id="app">
+
+        <!-- 遮罩层 -->
+        <div v-if="isLoading" class="mask">
+            <div class="door top"></div>
+            <div class="door bottom"></div>
+        </div>
+
         <div class="container">
             <!-- 仪表盘部分 -->
             <div class="dashboard" :class="{ hidden: currentSection !== 'dashboard' }">
