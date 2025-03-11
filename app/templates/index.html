@@ -181,12 +181,16 @@
                         <el-card>
                             <template #header>
                                 <div class="card-header">
-                                    <span class="card-header-title">监控文件列表</span>
-                                    <el-button type="danger" size="small" @click="removeFromMonitor">
-                                        删除
+                                    <span class="card-header-title" v-if="monitoredFilesDisplayerMode === 0" >监控文件列表: 按列表查看</span>
+                                    <span class="card-header-title" v-if="monitoredFilesDisplayerMode === 1" >监控文件列表: 按目录查看</span>
+                                    <el-button type="success" size="small" @click="SwitchMonitoredFilesDisplayerMode">
+                                        切换查看模式
                                     </el-button>
                                     <el-button type="success" size="small" @click="generateVersion">
                                         更新版本
+                                    </el-button>
+                                    <el-button type="danger" size="small" @click="removeFromMonitor">
+                                        删除
                                     </el-button>
                                 </div>
                             </template>
@@ -207,7 +211,7 @@
                                 </el-table-column>
                                 <el-table-column prop="allow" label="分发规则" width="180">
                                     <template #default="scope">
-                                        <span>{{ scope.row.allow ? '允许分发' : '阻止分发' }}</span>
+                                        <span>{{ scope.row.isBack ? '' : (scope.row.allow ? '允许分发' : '阻止分发') }}</span>
                                     </template></el-table-column>
                                 <el-table-column prop="lastUpdate" label="最后更新" width="180"></el-table-column>
                             </el-table>

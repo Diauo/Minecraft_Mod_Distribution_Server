@@ -1,13 +1,14 @@
 const admin_api = {
-  modifyMonitorList(add, monitor_list) {
-    return axios.post('/api/him/modify_monitor', {
+  modifyMonitorList(add, allow, monitor_list) {
+    return axios.post('/api/him/monitor/modify', {
       'add': add,
+      'allow': allow,
       'monitor_list': monitor_list
     });
   },
   queryMonitor(page, size, name, server_path, client_path, is_directory, allow,
     created_date_start, created_date_end, updated_date_start, updated_date_end) {
-    return axios.post('/api/him/query_monitor', {
+    return axios.post('/api/him/monitor/query', {
       'page': page,
       'size': size,
       'name': name,
@@ -22,13 +23,16 @@ const admin_api = {
     });
   },
   genVersion() {
-    return axios.get('/api/him/gen_version')
+    return axios.get('/api/him/version/gen')
   },
   reloadConfig() {
-    return axios.get('/api/him/reload_config')
+    return axios.get('/api/him/config/reload')
   },
   getDirectoryContents(path, filter) {
-    return axios.post('/api/him/get_directory', { 'path': path, 'filter': filter })
+    return axios.post('/api/him/directory/get', { 'path': path, 'filter': filter })
+  },
+  getMonitorDirectoryContents(client_path) {
+    return axios.post('/api/him/monitor/get_directory', { 'client_path': client_path })
   }
 };
 

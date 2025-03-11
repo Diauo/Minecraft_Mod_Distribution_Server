@@ -61,13 +61,15 @@ class File(Base_model):
 
 class Monitor_File(Base_model):
     __tablename__ = 'base_monitor_file'
-    __info__ = ''' 监控文件
+    __info__ = ''' 监控文件或者目录
     '''
     name = db.Column(db.String(64), unique=False, nullable=False)
-    server_path = db.Column(db.String(256), unique=True, nullable=False)
+    server_path = db.Column(db.String(256), unique=False, nullable=False)
     client_path = db.Column(db.String(256), unique=False, nullable=False)
-    is_directory = db.Column(db.Boolean, unique=False,
-                             nullable=False)  # 目录还是文件
+    is_directory = db.Column(db.Boolean, unique=False, nullable=False)  # 目录还是文件
+    is_virtual_directory = db.Column(db.Boolean, unique=False, nullable=False)  # 是否是虚拟目录
+    parent_id = db.Column(db.Integer, db.ForeignKey('base_monitor_file.id'), nullable=True)  # 上级目录ID
+    is_empty = db.Column(db.Boolean, unique=False, nullable=False, default=True)  # 目录是否为空
     allow = db.Column(db.Boolean, unique=False, nullable=False)  # 允许下发或者排除
 
 

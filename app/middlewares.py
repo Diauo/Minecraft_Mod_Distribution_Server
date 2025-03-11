@@ -1,6 +1,6 @@
-from flask import request, jsonify, current_app
+from flask import request, jsonify, current_app, has_request_context
 from fnmatch import fnmatch
-
+from app.util import log_utils
 
 def app_before_request(app):
     # 访问控制
@@ -48,10 +48,15 @@ def app_after_request(app):
         return response
 
 # 异常处理
-
-
 def app_exception_handler(app):
     @app.errorhandler(Exception)
     def handle_exception(e):
         error_message = f"{type(e).__name__}: {str(e)}"
+        # 获取请求URL（如果有请求上下文）
+        request_info = ""
+        if has_request_context():
+            request_info = f"接口异常 - URL {request.method}:{request.url}"
+            log_utils.logger.error(f"{request_info} \n异常消息： {error_message}", exc_info=True)
+        else:
+            log_utils.logger.error(f"非接口异常 - {error_message}", exc_info=True)
         return error_message, 500

@@ -36,6 +36,9 @@ const app = createApp({
         const selectedMonitorFiles = ref([]);
         let chart = null; // 存储图表实例
 
+        // 监控文件查看方式
+        const monitoredFilesDisplayerMode = ref(0);
+
         // ref对象
         const serverFileTable = ref(null);
         const monitoredFileTable = ref(null);
@@ -45,12 +48,14 @@ const app = createApp({
         const serverFiles = ref([]);
         // 服务器当前路径
         const serverCurrentPath = ref(null)
+        // 监控目录当前路径
+        const monitorCurrentPath = ref('\\')
+        // 监控目录当前路径id
+        const monitorCurrentPathId = ref(0)
         // 当前目录文件数量
         const serverFileCount = ref(0)
         // 监控的文件
         const monitoredFiles = ref([]);
-        let monitoredFilesCurrentPage = 1;
-        let monitoredFilesCurrentSize = 100;
 
         // 模拟数据
         const stats = ref({
@@ -69,9 +74,9 @@ const app = createApp({
             // 获取服务器文件列表
             let response = await api.admin.getDirectoryContents();
             flushServerFileList(response.data, response.data.data)
-            response = await api.admin.queryMonitor(monitoredFilesCurrentPage, monitoredFilesCurrentSize);
-            flushMonitoredFilesList(response.data, response.data.data)
+            getMonitorDataAndFlush()
 
+            // 2秒后隐藏加载动画
             setTimeout(() => {
                 isLoading.value = false
                 document.body.style.overflow = '';
@@ -125,39 +130,11 @@ const app = createApp({
                 alert(msg)
                 return
             }
-            serverFileCount.value = data.count
+            serverFileCount.value = data.total
             serverCurrentPath.value = data.current_path
-            let files = [{ name: "[返回上一级]", isDir: true, isBack: true }]
-            for (let item of data.directories) {
-                files.push({
-                    name: item.name,
-                    path: item.path,
-                    isDir: true
-                })
-            }
-            for (let item of data.files) {
-                files.push({
-                    name: item.name,
-                    path: item.path,
-                    isDir: false,
-                    size: formatFileSize(item.size),
-                    lastModified: item.last_modified
-                })
-            }
-            serverFiles.value = files;
-        }
 
-        // 刷新文件列表
-        const flushMonitoredFilesList = (result, data) => {
-            if (!result.status) {
-                let msg = "刷新监控文件列表失败：" + result.code + ":" + data
-                console.log(msg)
-                alert(msg)
-                return
-            }
-            let files = []
 
-            data.result.sort((a, b) => {
+            data.directories.sort((a, b) => {
                 // 先比较 is_directory，true 的排在前面
                 if (a.is_directory && !b.is_directory) {
                     return -1; // a 排在前面
@@ -171,17 +148,61 @@ const app = createApp({
                 }
             });
 
-            for (let item of data.result) {
+            let files = [{ name: "[返回上一级]", isDir: true, isBack: true }]
+            for (let item of data.directories) {
+                files.push({
+                    name: item.name,
+                    isDir: item.is_directory,
+                    path: item.path,
+                    size: formatFileSize(item.size),
+                    lastModified: item.last_modified
+                })
+            }
+
+            serverFiles.value = files;
+        }
+
+        // 刷新监控的文件列表
+        const flushMonitoredFilesList = (result, data) => {
+            if (!result.status) {
+                let msg = "刷新监控文件列表失败：" + result.code + ":" + data
+                console.log(msg)
+                alert(msg)
+                return
+            }
+
+            data.directories.sort((a, b) => {
+                // 先比较 is_directory，true 的排在前面
+                if (a.is_directory && !b.is_directory) {
+                    return -1; // a 排在前面
+                } else if (!a.is_directory && b.is_directory) {
+                    return 1; // b 排在前面
+                } else {
+                    // 如果 is_directory 相同，按 updated_date 排序
+                    const dateA = new Date(a.updated_date);
+                    const dateB = new Date(b.updated_date);
+                    return dateA - dateB; // 升序排序，若需降序排序，使用 dateB - dateA
+                }
+            });
+            let files = []
+
+            if (monitoredFilesDisplayerMode.value === 1 && (data.current_path && data.current_path !== "\\")) {
+                files = [{ name: "[返回上一级]", isDir: true, isBack: true }]
+            }
+            for (let item of data.directories) {
                 files.push({
                     name: item.name,
                     clientPath: item.client_path,
                     serverPath: item.server_path,
                     isDir: item.is_directory,
                     lastUpdate: item.updated_date,
-                    allow: item.allow
+                    allow: item.allow,
+                    parent_id: item.parent_id
                 })
             }
             monitoredFiles.value = files;
+            monitorCurrentPath.value = data.current_path;
+            monitorCurrentPathId.value = data.current_path_id;
         }
 
         // 切换页面
@@ -206,36 +227,52 @@ const app = createApp({
         };
 
         const handleServerFileTableRowClick = async (row, column, event) => {
+            openDirectory(row, selectedServerFiles, serverFileTable, serverCurrentPath,
+                api.admin.getDirectoryContents, flushServerFileList)
+        };
+
+        const handleMonitoredFileTableRowClick = (row, column, event) => {
+            
+            if (monitoredFilesDisplayerMode.value === 0) {
+            monitoredFileTable.value.toggleRowSelection(row);
+        }else{
+            openDirectory(row, selectedMonitorFiles, monitoredFileTable, monitorCurrentPath,
+                api.admin.getMonitorDirectoryContents, flushMonitoredFilesList)
+        }
+        };
+
+
+        const openDirectory = async (row, selectedFiles, fileTable, currentPath, requestMethod, flushMethod) => {
             // 如果点击的是文件夹，进入下一层
             if (row.isDir) {
                 // 取消所有选择
-                selectedServerFiles.value = [];
-                serverFileTable.value.clearSelection();
+                selectedFiles.value = [];
+                fileTable.value.clearSelection();
                 try {
                     let response = null
                     if (row.isBack) {
                         // 返回上一级目录
-                        let lastIndex = serverCurrentPath.value.lastIndexOf("\\");
-                        let path = serverCurrentPath.value
+                        let lastIndex = currentPath.value.lastIndexOf("\\");
+                        let path = currentPath.value
                         if (lastIndex !== -1) path = path.slice(0, lastIndex)
-                        response = await api.admin.getDirectoryContents(path, undefined);
+                        response = await requestMethod(path, undefined);
                     } else {
                         // 异步获取新目录内容
-                        response = await api.admin.getDirectoryContents(serverCurrentPath.value + "\\" + row.name, undefined);
+                        let prefix = currentPath.value
+                        if (!prefix || prefix === "\\"){ 
+                            prefix = ""
+                        }
+                        response = await requestMethod(prefix + "\\" + row.name, undefined);
                     }
                     // 刷新文件列表
-                    flushServerFileList(response.data, response.data.data)
+                    flushMethod(response.data, response.data.data)
                 } catch (error) {
                     console.error("获取目录内容失败～", error);
                 }
             } else {
-                serverFileTable.value.toggleRowSelection(row);
+                fileTable.value.toggleRowSelection(row);
             }
-        };
-
-        const handleMonitoredFileTableRowClick = (row, column, event) => {
-            monitoredFileTable.value.toggleRowSelection(row);
-        };
+        }
 
         const getServerFileTableRowClassName = ({ row }) => {
             return selectedServerFiles.value.includes(row) ? 'selected-row' : '';
@@ -247,31 +284,56 @@ const app = createApp({
         // 添加到监控
         const addToMonitor = async (allow) => {
             let files = []
+            let prefix = monitorCurrentPath.value
+            let pathId = monitorCurrentPathId.value
+            if(!prefix){
+                prefix = "\\"
+            }
+            if(!pathId){
+                pathId = 0
+            }
             for (let item of selectedServerFiles.value) {
                 files.push({
                     name: item.name,
                     server_path: item.path,
-                    client_path: "记得加上设置客户端路径的逻辑",
+                    client_path: prefix + item.name,
                     is_directory: item.isDir,
+                    is_virtual_directory: false,
+                    parent_id: pathId,
+                    is_empty: false, // todo 先不做文件夹为空校验，默认不为空
                     allow: allow,
                 })
             }
-            let response = await api.admin.modifyMonitorList(true, files)
-            response = await api.admin.queryMonitor(monitoredFilesCurrentPage, monitoredFilesCurrentSize);
-            flushMonitoredFilesList(response.data, response.data.data)
+            let response = await api.admin.modifyMonitorList(true, allow, files)
+            if (!response.data.status) {
+                let msg = "添加监控文件失败：" + response.data.code + ":" + response.data.data
+                console.log(msg)
+                alert(msg)
+                return
+            }
+            // 刷新监控文件列表
+            getMonitorDataAndFlush()
         };
 
         // 从监控中移除
         const removeFromMonitor = async () => {
+            debugger;
             let files = []
             for (let item of selectedMonitorFiles.value) {
                 files.push({
-                    server_path: item.serverPath
+                    server_path: item.serverPath,
+                    parent_id: item.parent_id
                 })
             }
-            let response = await api.admin.modifyMonitorList(false, files)
-            response = await api.admin.queryMonitor(monitoredFilesCurrentPage, monitoredFilesCurrentSize);
-            flushMonitoredFilesList(response.data, response.data.data)
+            let response = await api.admin.modifyMonitorList(false, false, files)
+            if (!response.data.status) {
+                let msg = "移除监控文件失败：" + response.data.code + ":" + response.data.data
+                console.log(msg)
+                alert(msg)
+                return
+            }
+            // 刷新监控文件列表
+            getMonitorDataAndFlush()
         };
 
         const generateVersion = async () => {
@@ -303,6 +365,30 @@ const app = createApp({
             return iconMap[ext] || Files;
         }
 
+        const SwitchMonitoredFilesDisplayerMode = () => {
+            let limit = 2;
+            let value = monitoredFilesDisplayerMode.value;
+            value += 1;
+            if (value >= limit) {
+                monitoredFilesDisplayerMode.value = 0
+            } else {
+                monitoredFilesDisplayerMode.value = value
+            }
+            getMonitorDataAndFlush()
+        }
+
+        const getMonitorDataAndFlush = async () => {
+            // 根据监控文件查看方式获取数据
+            let response = null;
+            if (monitoredFilesDisplayerMode.value === 0) {
+                // 列表模式
+                response = await api.admin.queryMonitor();
+            } else {
+                // 目录结构化查看
+                response = await api.admin.getMonitorDirectoryContents(monitorCurrentPath.value);
+            }
+            flushMonitoredFilesList(response.data, response.data.data)
+        }
 
         return {
             isLoading,
@@ -313,6 +399,8 @@ const app = createApp({
             switchSection,
             handleServerSelection,
             handleMonitorSelection,
+            monitoredFilesDisplayerMode,
+            SwitchMonitoredFilesDisplayerMode,
             selectable,
             serverFileTable,
             monitoredFileTable,
